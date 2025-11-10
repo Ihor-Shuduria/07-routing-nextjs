@@ -19,30 +19,32 @@ export default function NotePreviewClient() {
   } = useQuery<Note>({
     queryKey: ["note", id],
     queryFn: () => fetchNoteById(id!),
+    refetchOnMount: false,
   });
 
+  const handleClose = () => router.back();
+
   return (
-    <Modal>
-      {isLoading && <p>Loading...</p>}
-      {isError && <p>Error: {error?.message}</p>}
-
-      {note && (
-        <div className={css.item}>
-          <div className={css.header}>
-            <h2>{note.title}</h2>
-            <span className={css.tag}>{note.tag}</span>
+    <div className={css.container}>
+      <Modal onClose={handleClose}>
+        {isLoading && <p>Loading...</p>}
+        {isError && <p>Error: {error?.message}</p>}
+        {note && (
+          <div className={css.item}>
+            <div className={css.header}>
+              <h2>{note.title}</h2>
+              <span className={css.tag}>{note.tag}</span>
+            </div>
+            <p className={css.content}>{note.content}</p>
+            <p className={css.date}>
+              Created: {new Date(note.createdAt).toLocaleDateString()}
+            </p>
+            <button onClick={handleClose} className={css.backBtn}>
+              ← Back to notes
+            </button>
           </div>
-
-          <p className={css.content}>{note.content}</p>
-          <p className={css.date}>
-            Created: {new Date(note.createdAt).toLocaleDateString()}
-          </p>
-
-          <button onClick={() => router.back()} className={css.backBtn}>
-            ← Back to notes
-          </button>
-        </div>
-      )}
-    </Modal>
+        )}
+      </Modal>
+    </div>
   );
 }
