@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchNotes, NotesResponse } from "@/lib/api";
 import SearchBox from "@/components/SearchBox/SearchBox";
@@ -12,42 +12,36 @@ import css from "./NotesPage.module.css";
 
 function useDebounce<T>(value: T, delay = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-  useEffect(() => {
-    const handler = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(handler);
-  }, [value, delay]);
-
+  setTimeout(() => setDebouncedValue(value), delay);
   return debouncedValue;
 }
 
 interface NotesClientProps {
   page: number;
   search: string;
+  tag: string;
 }
 
-export default function NotesClient({ page, search }: NotesClientProps) {
-  const [currentPage, setCurrentPage] = useState<number>(page);
-  const [searchQuery, setSearchQuery] = useState<string>(search);
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+export default function NotesClient({ page, search, tag }: NotesClientProps) {
+  const [searchQuery, setSearchQuery] = useState(search);
+  const [currentPage, setCurrentPage] = useState(page);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setCurrentPage((prev) => (prev !== 1 ? 1 : prev));
-    }, 0);
-    return () => clearTimeout(t);
-  }, [debouncedSearch]);
+  const effectivePage = search !== debouncedSearch || tag ? currentPage : 1;
 
   const { data, isLoading, isError } = useQuery<NotesResponse, Error>({
-    queryKey: ["notes", currentPage, debouncedSearch],
-    queryFn: () => fetchNotes(currentPage, debouncedSearch),
-    placeholderData: (previousData) => previousData,
+    queryKey: ["notes", effectivePage, debouncedSearch, tag],
+    queryFn: () => fetchNotes(effectivePage, debouncedSearch, tag),
+    placeholderData: (prev) => prev,
   });
 
   if (isLoading) return <p>Loading...</p>;
   if (isError) return <p>Error loading notes</p>;
+
+  const notes = data?.notes ?? [];
+  const totalPages = data?.totalPages ?? 1;
 
   return (
     <div className={css.app}>
@@ -58,13 +52,13 @@ export default function NotesClient({ page, search }: NotesClientProps) {
         </button>
       </div>
 
-      <NoteList notes={data?.notes ?? []} />
+      <NoteList notes={notes} />
 
-      {data && data.totalPages > 1 && (
+      {totalPages > 1 && (
         <Pagination
-          pageCount={data.totalPages}
-          forcePage={currentPage - 1}
-          onPageChange={(p: number) => setCurrentPage(p + 1)}
+          pageCount={totalPages}
+          forcePage={effectivePage - 1}
+          onPageChange={(i) => setCurrentPage(i + 1)}
         />
       )}
 

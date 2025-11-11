@@ -6,18 +6,24 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Notes — NoteHub" };
 
-export default async function NotesPage() {
+export default async function NotesPage({
+  params,
+}: {
+  params: Promise<{ slug: string[] }>;
+}) {
+  const { slug } = await params;
+  const tag = slug?.[0] ?? "all";
+
   const queryClient = new QueryClient();
 
   await queryClient.prefetchQuery({
-    queryKey: ["notes", "", 1],
-    queryFn: () => fetchNotes(1, ""),
+    queryKey: ["notes", 1, "", tag],
+    queryFn: () => fetchNotes(1, "", tag),
   });
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      {}
-      <NotesClient page={1} search="" />
+      <NotesClient page={1} search="" tag={tag} />
     </HydrationBoundary>
   );
 }

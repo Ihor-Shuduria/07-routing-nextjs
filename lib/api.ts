@@ -38,13 +38,20 @@ export type CreateNoteInput = {
 
 export const fetchNotes = async (
   page: number,
-  search: string
+  search: string,
+  tag?: string
 ): Promise<NotesResponse> => {
+  const params: Record<string, string | number> = {
+    page,
+    perPage: 12,
+  };
+
+  if (search) params.search = search;
+  if (tag && tag !== "all") params.tag = tag;
+
   const { data } = await api.get<{ notes: Note[]; totalPages: number }>(
     "/notes",
-    {
-      params: { page, perPage: 12, search },
-    }
+    { params }
   );
 
   return { notes: data.notes, totalPages: data.totalPages };
