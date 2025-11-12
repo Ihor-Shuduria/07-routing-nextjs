@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchNotes, NotesResponse } from "@/lib/api";
 import SearchBox from "@/components/SearchBox/SearchBox";
@@ -12,7 +12,12 @@ import css from "./NotesPage.module.css";
 
 function useDebounce<T>(value: T, delay = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  setTimeout(() => setDebouncedValue(value), delay);
+
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
   return debouncedValue;
 }
 
@@ -29,11 +34,16 @@ export default function NotesClient({ page, search, tag }: NotesClientProps) {
 
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  const effectivePage = search !== debouncedSearch || tag ? currentPage : 1;
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setCurrentPage(1);
+    }, 0);
+    return () => clearTimeout(id);
+  }, [debouncedSearch, tag]);
 
   const { data, isLoading, isError } = useQuery<NotesResponse, Error>({
-    queryKey: ["notes", effectivePage, debouncedSearch, tag],
-    queryFn: () => fetchNotes(effectivePage, debouncedSearch, tag),
+    queryKey: ["notes", currentPage, debouncedSearch, tag],
+    queryFn: () => fetchNotes(currentPage, debouncedSearch, tag),
     placeholderData: (prev) => prev,
   });
 
@@ -52,13 +62,13 @@ export default function NotesClient({ page, search, tag }: NotesClientProps) {
         </button>
       </div>
 
-      <NoteList notes={notes} />
+      {notes.length > 0 ? <NoteList notes={notes} /> : <p>No notes found</p>}
 
       {totalPages > 1 && (
         <Pagination
           pageCount={totalPages}
-          forcePage={effectivePage - 1}
-          onPageChange={(i) => setCurrentPage(i + 1)}
+          forcePage={currentPage - 1}
+          onPageChange={(i: number) => setCurrentPage(i + 1)}
         />
       )}
 
